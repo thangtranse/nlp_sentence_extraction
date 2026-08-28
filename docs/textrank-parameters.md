@@ -3,7 +3,7 @@
 Notebook [`duc-textrank-pipeline.ipynb`](../notebooks/duc-textrank-pipeline.ipynb) sử dụng các tham số sau:
 
 ```python
-SIMILARITY_THRESHOLD = 0.10
+SIMILARITY_THRESHOLD = 0.0125
 PAGERANK_DAMPING = 0.85
 PAGERANK_TOLERANCE = 1e-8
 PAGERANK_MAX_ITERATIONS = 1000
@@ -12,12 +12,12 @@ USE_MMR = True
 MMR_LAMBDA = 0.70
 ```
 
-Các giá trị trên là cấu hình khởi đầu hợp lý, không phải những giá trị tối ưu đã được chứng minh. Muốn xác định cấu hình phù hợp cần chạy thực nghiệm trên tập train, đánh giá bằng summary tham chiếu, sau đó giữ nguyên cấu hình khi đánh giá tập test.
+Ngưỡng `0.0125` là cấu hình được khóa sau phép sweep chi tiết ở vùng thấp trên tập train. Đây là giá trị tốt nhất cho pipeline PageRank + Top-K=15 trong lưới đã thử, không phải một giá trị tối ưu phổ quát. Các tham số còn lại được giữ cố định để cô lập ảnh hưởng của threshold; sau khi chọn cấu hình, hệ thống mới đánh giá một lần trên tập test.
 
 ## 1. `SIMILARITY_THRESHOLD`
 
 ```python
-SIMILARITY_THRESHOLD = 0.10
+SIMILARITY_THRESHOLD = 0.0125
 ```
 
 Đây là ngưỡng quyết định hai câu có được nối bằng một cạnh trong đồ thị TextRank hay không:
@@ -32,11 +32,11 @@ Cosine similarity nằm trong khoảng từ `0` đến `1` đối với các vec
 - Gần `0`: hai câu có rất ít từ quan trọng chung.
 - Gần `1`: hai câu có cách biểu diễn TF-IDF rất giống nhau.
 
-Giá trị `0.10` không có nghĩa là hai câu giống nhau đúng 10% về ngữ nghĩa. Đây là độ gần nhau giữa hai vector TF-IDF, chủ yếu phản ánh mức độ tương đồng từ vựng sau tiền xử lý.
+Giá trị `0.0125` không có nghĩa là hai câu giống nhau đúng 1,25% về ngữ nghĩa. Đây là độ gần nhau giữa hai vector TF-IDF, chủ yếu phản ánh mức độ tương đồng từ vựng sau tiền xử lý.
 
 Ví dụ:
 
-| Cặp câu | Cosine similarity | Có cạnh khi threshold = 0.10? |
+| Cặp câu | Cosine similarity | Có cạnh khi threshold = 0.0125? |
 |---|---:|---|
 | A–B | 0.32 | Có |
 | A–C | 0.14 | Có |
@@ -110,16 +110,9 @@ Sau đó chạy thử một dải giá trị:
 
 ```python
 THRESHOLD_CANDIDATES = [
-    0.00,
-    0.02,
-    0.05,
-    0.08,
-    0.10,
-    0.12,
-    0.15,
-    0.20,
-    0.25,
-    0.30,
+    0.0000, 0.0025, 0.0050, 0.0075, 0.0100,
+    0.0125, 0.0150, 0.0175, 0.0200, 0.0225,
+    0.0250, 0.0275, 0.0300,
 ]
 ```
 
@@ -138,7 +131,7 @@ Quy trình chọn tham số:
 1. Chạy từng threshold trên tập train.
 2. Giữ nguyên các tham số khác để so sánh công bằng.
 3. Sinh summary với cùng giới hạn số từ.
-4. Tính ROUGE trung bình trên tất cả topic.
+4. Tính Macro Precision, Recall và F1 trên tất cả topic hợp lệ.
 5. Đọc thủ công một số cặp câu có similarity gần ngưỡng.
 6. Chọn giá trị có chất lượng và độ ổn định tốt trên nhiều topic.
 7. Giữ nguyên giá trị đã chọn khi đánh giá tập test.
@@ -296,7 +289,7 @@ Khi tối ưu một tham số, giữ nguyên tất cả tham số còn lại. N�
 
 Thứ tự thử nghiệm đề xuất:
 
-1. Chọn `SIMILARITY_THRESHOLD` dựa trên thống kê đồ thị và ROUGE.
+1. Chọn `SIMILARITY_THRESHOLD` dựa trên thống kê đồ thị và Macro F1.
 2. Kiểm tra một vài giá trị `PAGERANK_DAMPING`.
 3. Giữ tolerance và max iterations ở mức bảo đảm hội tụ.
 4. So sánh tắt và bật MMR.
