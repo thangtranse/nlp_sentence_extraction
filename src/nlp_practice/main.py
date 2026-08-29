@@ -12,6 +12,7 @@ from nlp_practice.tfidf import (
     build_tfidf_vectors,
     compute_tfidf_with_sklearn,
 )
+from nlp_practice.weights import calculate_sentence_priorities
 
 # --- Config
 SIMILARITY_THRESHOLD = 0.0125
@@ -19,6 +20,14 @@ SIMILARITY_THRESHOLD = 0.0125
 PAGERANK_DAMPING = 0.85
 PAGERANK_TOLERANCE = 1e-8
 PAGERANK_MAX_ITERATIONS = 1000
+
+USE_PERSONALIZED_PAGERANK = True
+CENTROID_WEIGHT = 0.55
+POSITION_WEIGHT = 0.30
+LENGTH_WEIGHT = 0.15
+PREFERRED_SENTENCE_WORDS = 20
+
+MAX_SUMMARY_WORDS = 100
 
 USE_MMR = True
 MAX_SUMMARY_WORDS = 100
@@ -75,6 +84,17 @@ def main() -> None:
             SIMILARITY_THRESHOLD,
         )
 
+        personalization = None
+        if USE_PERSONALIZED_PAGERANK:
+            personalization = calculate_sentence_priorities(
+                sentences=sentences,
+                vectors=tfidf_vectors,
+                centroid_weight=CENTROID_WEIGHT,
+                position_weight=POSITION_WEIGHT,
+                length_weight=LENGTH_WEIGHT,
+                preferred_words=PREFERRED_SENTENCE_WORDS,
+            )
+
         draw_sentence_graph(
             graph=graph,
             output_path=OUTPUT_DIR / "vector" / topic_path.with_suffix(".png").name,
@@ -85,6 +105,7 @@ def main() -> None:
             damping=PAGERANK_DAMPING,
             tolerance=PAGERANK_TOLERANCE,
             max_iterations=PAGERANK_MAX_ITERATIONS,
+            personalization=personalization,
         )
 
         selected_sentences = rank_sentences_by_pagerank(
