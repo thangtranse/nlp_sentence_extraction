@@ -84,7 +84,10 @@ TOKEN_PATTERN = re.compile(r"[a-z]+(?:'[a-z]+)?|\d+")
 
 
 def preprocess(text: str) -> list[str]:
-    all_tokens = TOKEN_PATTERN.findall(text.lower())
+    normalized_text = text.replace(";", " ").replace("-", " ")
+    normalized_text = re.sub(r"\s+", " ", normalized_text)
+
+    all_tokens = TOKEN_PATTERN.findall(normalized_text.lower())
 
     filtered_tokens: list[str] = []
 
