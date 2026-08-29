@@ -3,7 +3,7 @@
 Notebook [`duc-textrank-pipeline.ipynb`](../notebooks/duc-textrank-pipeline.ipynb) sử dụng các tham số sau:
 
 ```python
-SIMILARITY_THRESHOLD = 0.0125
+SIMILARITY_THRESHOLD = 0.0275
 PAGERANK_DAMPING = 0.85
 PAGERANK_TOLERANCE = 1e-8
 PAGERANK_MAX_ITERATIONS = 1000
@@ -12,12 +12,12 @@ USE_MMR = True
 MMR_LAMBDA = 0.70
 ```
 
-Ngưỡng `0.0125` là cấu hình được khóa sau phép sweep chi tiết ở vùng thấp trên tập train. Đây là giá trị tốt nhất cho pipeline PageRank + Top-K=15 trong lưới đã thử, không phải một giá trị tối ưu phổ quát. Các tham số còn lại được giữ cố định để cô lập ảnh hưởng của threshold; sau khi chọn cấu hình, hệ thống mới đánh giá một lần trên tập test.
+Ngưỡng `0.0275` là cấu hình được khóa sau khi package chuyển sang PageRank + MMR với ngân sách 100 từ và chạy lại sweep chi tiết ở vùng thấp trên tập train. Đây là giá trị tốt nhất theo Macro F1 trong lưới đã thử cho pipeline này, không phải một giá trị tối ưu phổ quát. Các tham số còn lại được giữ cố định để cô lập ảnh hưởng của threshold; sau khi chọn cấu hình, hệ thống mới đánh giá một lần trên tập test.
 
 ## 1. `SIMILARITY_THRESHOLD`
 
 ```python
-SIMILARITY_THRESHOLD = 0.0125
+SIMILARITY_THRESHOLD = 0.0275
 ```
 
 Đây là ngưỡng quyết định hai câu có được nối bằng một cạnh trong đồ thị TextRank hay không:
@@ -32,11 +32,11 @@ Cosine similarity nằm trong khoảng từ `0` đến `1` đối với các vec
 - Gần `0`: hai câu có rất ít từ quan trọng chung.
 - Gần `1`: hai câu có cách biểu diễn TF-IDF rất giống nhau.
 
-Giá trị `0.0125` không có nghĩa là hai câu giống nhau đúng 1,25% về ngữ nghĩa. Đây là độ gần nhau giữa hai vector TF-IDF, chủ yếu phản ánh mức độ tương đồng từ vựng sau tiền xử lý.
+Giá trị `0.0275` không có nghĩa là hai câu giống nhau đúng 2,75% về ngữ nghĩa. Đây là độ gần nhau giữa hai vector TF-IDF, chủ yếu phản ánh mức độ tương đồng từ vựng sau tiền xử lý.
 
 Ví dụ:
 
-| Cặp câu | Cosine similarity | Có cạnh khi threshold = 0.0125? |
+| Cặp câu | Cosine similarity | Có cạnh khi threshold = 0.0275? |
 |---|---:|---|
 | A–B | 0.32 | Có |
 | A–C | 0.14 | Có |

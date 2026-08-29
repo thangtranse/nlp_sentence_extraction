@@ -9,16 +9,81 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
 
-
 STOP_WORDS = {
-    "a", "an", "and", "are", "as", "at", "be", "been", "being", "but", "by",
-    "for", "from", "had", "has", "have", "he", "her", "hers", "him", "his",
-    "i", "if", "in", "into", "is", "it", "its", "no", "not", "of", "on",
-    "or", "our", "ours", "she", "so", "that", "the", "their", "theirs",
-    "them", "there", "they", "this", "those", "to", "was", "we", "were",
-    "what", "when", "where", "which", "who", "will", "with", "would", "you",
-    "your", "said", "about", "after", "all", "also", "before", "could",
-    "more", "most", "other", "over", "than", "then", "up",
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "being",
+    "but",
+    "by",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "he",
+    "her",
+    "hers",
+    "him",
+    "his",
+    "i",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "its",
+    "no",
+    "not",
+    "of",
+    "on",
+    "or",
+    "our",
+    "ours",
+    "she",
+    "so",
+    "that",
+    "the",
+    "their",
+    "theirs",
+    "them",
+    "there",
+    "they",
+    "this",
+    "those",
+    "to",
+    "was",
+    "we",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "who",
+    "will",
+    "with",
+    "would",
+    "you",
+    "your",
+    "said",
+    "about",
+    "after",
+    "all",
+    "also",
+    "before",
+    "could",
+    "more",
+    "most",
+    "other",
+    "over",
+    "than",
+    "then",
+    "up",
 }
 TOKEN_PATTERN = re.compile(r"[a-z]+(?:'[a-z]+)?|\d+")
 
@@ -73,7 +138,9 @@ class TopicResult:
 
     @property
     def word_count(self) -> int:
-        return sum(len(sentence.content.split()) for sentence in self.selected_sentences)
+        return sum(
+            len(sentence.content.split()) for sentence in self.selected_sentences
+        )
 
 
 def preprocess(text: str) -> tuple[str, ...]:
@@ -168,7 +235,9 @@ def calculate_tfidf_vectors(sentences: list[Sentence]) -> list[dict[str, float]]
     vectors = []
     for tokens in tokenized_sentences:
         tf = calculate_tf(tokens)
-        vectors.append(l2_normalize({term: value * idf[term] for term, value in tf.items()}))
+        vectors.append(
+            l2_normalize({term: value * idf[term] for term, value in tf.items()})
+        )
     return vectors
 
 
@@ -288,7 +357,9 @@ def summarize_topic(topic_path: Path, config: TextRankConfig) -> TopicResult:
     started = time.perf_counter()
     sentences = read_topic(topic_path)
     if not sentences:
-        return TopicResult(topic_path.name, (), (), {}, (), {}, 0, time.perf_counter() - started)
+        return TopicResult(
+            topic_path.name, (), (), {}, (), {}, 0, time.perf_counter() - started
+        )
     vectors = calculate_tfidf_vectors(sentences)
     graph, similarities = build_sentence_graph(vectors, config.similarity_threshold)
     scores, iterations = calculate_pagerank(
@@ -421,74 +492,84 @@ def evaluate_config(
     for topic_path in sorted(path for path in input_dir.iterdir() if path.is_file()):
         reference_path = reference_dir / topic_path.name
         if not reference_path.is_file():
-            raise FileNotFoundError(f"Missing reference for topic {topic_path.name}: {reference_path}")
+            raise FileNotFoundError(
+                f"Missing reference for topic {topic_path.name}: {reference_path}"
+            )
         base = {"split": split, "topic": topic_path.name, **_config_fields(config)}
         try:
             result = summarize_topic(topic_path, config)
         except PageRankConvergenceError:
-            rows.append({
-                **base,
-                "status": "not_converged",
-                "true_positive": 0,
-                "predicted": 0,
-                "reference": len(read_reference_keys(reference_path)),
-                "precision": 0.0,
-                "recall": 0.0,
-                "f1": 0.0,
-                "hit_at_1": 0,
-                "hit_at_3": 0,
-                "hit_at_5": 0,
-                "word_count": 0,
-                "budget_utilization": 0.0,
-                "nodes": 0,
-                "edges": 0,
-                "density": 0.0,
-                "isolated_nodes": 0,
-                "isolated_ratio": 0.0,
-                "average_degree": 0.0,
-                "connected_components": 0,
-                "mean_redundancy": 0.0,
-                "max_redundancy": 0.0,
-                "pagerank_iterations": config.pagerank_max_iterations,
-                "runtime_seconds": 0.0,
-            })
+            rows.append(
+                {
+                    **base,
+                    "status": "not_converged",
+                    "true_positive": 0,
+                    "predicted": 0,
+                    "reference": len(read_reference_keys(reference_path)),
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "f1": 0.0,
+                    "hit_at_1": 0,
+                    "hit_at_3": 0,
+                    "hit_at_5": 0,
+                    "word_count": 0,
+                    "budget_utilization": 0.0,
+                    "nodes": 0,
+                    "edges": 0,
+                    "density": 0.0,
+                    "isolated_nodes": 0,
+                    "isolated_ratio": 0.0,
+                    "average_degree": 0.0,
+                    "connected_components": 0,
+                    "mean_redundancy": 0.0,
+                    "max_redundancy": 0.0,
+                    "pagerank_iterations": config.pagerank_max_iterations,
+                    "runtime_seconds": 0.0,
+                }
+            )
             continue
         references = read_reference_keys(reference_path)
         metrics = evaluate_keys(result.prediction_keys, references)
         graph_metrics = calculate_graph_metrics(result.graph)
         mean_redundancy, max_redundancy = calculate_redundancy(result)
         prediction_keys = list(dict.fromkeys(result.prediction_keys))
-        rows.append({
-            **base,
-            "status": "converged",
-            "true_positive": metrics.true_positive,
-            "predicted": metrics.predicted,
-            "reference": metrics.reference,
-            "precision": metrics.precision,
-            "recall": metrics.recall,
-            "f1": metrics.f1,
-            "hit_at_1": int(any(key in references for key in prediction_keys[:1])),
-            "hit_at_3": int(any(key in references for key in prediction_keys[:3])),
-            "hit_at_5": int(any(key in references for key in prediction_keys[:5])),
-            "word_count": result.word_count,
-            "budget_utilization": result.word_count / config.max_summary_words,
-            "nodes": graph_metrics.nodes,
-            "edges": graph_metrics.edges,
-            "density": graph_metrics.density,
-            "isolated_nodes": graph_metrics.isolated_nodes,
-            "isolated_ratio": graph_metrics.isolated_ratio,
-            "average_degree": graph_metrics.average_degree,
-            "connected_components": graph_metrics.connected_components,
-            "mean_redundancy": mean_redundancy,
-            "max_redundancy": max_redundancy,
-            "pagerank_iterations": result.pagerank_iterations,
-            "runtime_seconds": result.elapsed_seconds,
-        })
+        rows.append(
+            {
+                **base,
+                "status": "converged",
+                "true_positive": metrics.true_positive,
+                "predicted": metrics.predicted,
+                "reference": metrics.reference,
+                "precision": metrics.precision,
+                "recall": metrics.recall,
+                "f1": metrics.f1,
+                "hit_at_1": int(any(key in references for key in prediction_keys[:1])),
+                "hit_at_3": int(any(key in references for key in prediction_keys[:3])),
+                "hit_at_5": int(any(key in references for key in prediction_keys[:5])),
+                "word_count": result.word_count,
+                "budget_utilization": result.word_count / config.max_summary_words,
+                "nodes": graph_metrics.nodes,
+                "edges": graph_metrics.edges,
+                "density": graph_metrics.density,
+                "isolated_nodes": graph_metrics.isolated_nodes,
+                "isolated_ratio": graph_metrics.isolated_ratio,
+                "average_degree": graph_metrics.average_degree,
+                "connected_components": graph_metrics.connected_components,
+                "mean_redundancy": mean_redundancy,
+                "max_redundancy": max_redundancy,
+                "pagerank_iterations": result.pagerank_iterations,
+                "runtime_seconds": result.elapsed_seconds,
+            }
+        )
     return rows
 
 
 def aggregate_rows(rows: list[dict[str, object]]) -> dict[str, object]:
-    eligible = [row for row in rows if row["status"] == "converged" and int(row["reference"]) > 0]
+    eligible = [
+        row
+        for row in rows
+        if row["status"] == "converged" and int(row["reference"]) > 0
+    ]
     converged = [row for row in rows if row["status"] == "converged"]
 
     def mean(field: str, source=eligible) -> float:
@@ -508,7 +589,9 @@ def aggregate_rows(rows: list[dict[str, object]]) -> dict[str, object]:
         "mean_average_degree": mean("average_degree", converged),
         "mean_connected_components": mean("connected_components", converged),
         "mean_redundancy": mean("mean_redundancy", converged),
-        "max_redundancy": max((float(row["max_redundancy"]) for row in converged), default=0.0),
+        "max_redundancy": max(
+            (float(row["max_redundancy"]) for row in converged), default=0.0
+        ),
         "mean_word_count": mean("word_count", converged),
         "mean_budget_utilization": mean("budget_utilization", converged),
         "mean_pagerank_iterations": mean("pagerank_iterations", converged),
@@ -531,29 +614,75 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 def write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 DETAIL_FIELDS = [
-    "config_id", "split", "topic", "status", "similarity_threshold",
-    "pagerank_damping", "pagerank_tolerance", "pagerank_max_iterations",
-    "max_summary_words", "use_mmr", "mmr_lambda", "true_positive",
-    "predicted", "reference", "precision", "recall", "f1", "hit_at_1",
-    "hit_at_3", "hit_at_5", "word_count", "budget_utilization", "nodes",
-    "edges", "density", "isolated_nodes", "isolated_ratio", "average_degree",
-    "connected_components", "mean_redundancy", "max_redundancy",
-    "pagerank_iterations", "runtime_seconds",
+    "config_id",
+    "split",
+    "topic",
+    "status",
+    "similarity_threshold",
+    "pagerank_damping",
+    "pagerank_tolerance",
+    "pagerank_max_iterations",
+    "max_summary_words",
+    "use_mmr",
+    "mmr_lambda",
+    "true_positive",
+    "predicted",
+    "reference",
+    "precision",
+    "recall",
+    "f1",
+    "hit_at_1",
+    "hit_at_3",
+    "hit_at_5",
+    "word_count",
+    "budget_utilization",
+    "nodes",
+    "edges",
+    "density",
+    "isolated_nodes",
+    "isolated_ratio",
+    "average_degree",
+    "connected_components",
+    "mean_redundancy",
+    "max_redundancy",
+    "pagerank_iterations",
+    "runtime_seconds",
 ]
 
 SUMMARY_FIELDS = [
-    "rank", "config_id", "similarity_threshold", "pagerank_damping",
-    "pagerank_tolerance", "pagerank_max_iterations", "max_summary_words",
-    "use_mmr", "mmr_lambda", "eligible_topics", "converged_topics",
-    "macro_precision", "macro_recall", "macro_f1", "macro_hit_at_1",
-    "macro_hit_at_3", "macro_hit_at_5", "mean_density",
-    "mean_isolated_ratio", "mean_average_degree", "mean_connected_components",
-    "mean_redundancy", "max_redundancy", "mean_word_count",
-    "mean_budget_utilization", "mean_pagerank_iterations", "mean_runtime_seconds",
+    "rank",
+    "config_id",
+    "similarity_threshold",
+    "pagerank_damping",
+    "pagerank_tolerance",
+    "pagerank_max_iterations",
+    "max_summary_words",
+    "use_mmr",
+    "mmr_lambda",
+    "eligible_topics",
+    "converged_topics",
+    "macro_precision",
+    "macro_recall",
+    "macro_f1",
+    "macro_hit_at_1",
+    "macro_hit_at_3",
+    "macro_hit_at_5",
+    "mean_density",
+    "mean_isolated_ratio",
+    "mean_average_degree",
+    "mean_connected_components",
+    "mean_redundancy",
+    "max_redundancy",
+    "mean_word_count",
+    "mean_budget_utilization",
+    "mean_pagerank_iterations",
+    "mean_runtime_seconds",
 ]
 
 
@@ -584,11 +713,13 @@ def run_sweep(
         for row in rows:
             row["config_id"] = identifier
         detail_rows.extend(rows)
-        summary_rows.append({
-            "config_id": identifier,
-            **_config_fields(config),
-            **aggregate_rows(rows),
-        })
+        summary_rows.append(
+            {
+                "config_id": identifier,
+                **_config_fields(config),
+                **aggregate_rows(rows),
+            }
+        )
     return detail_rows, summary_rows
 
 
@@ -596,7 +727,8 @@ def rank_configurations(
     summary_rows: list[dict[str, object]], required_topics: int
 ) -> list[dict[str, object]]:
     eligible = [
-        row for row in summary_rows
+        row
+        for row in summary_rows
         if int(float(row["converged_topics"])) == required_topics
     ]
     ranked = sorted(
@@ -655,7 +787,11 @@ def build_local_grid(
 
 def config_from_row(row: dict[str, object]) -> TextRankConfig:
     use_mmr_value = row["use_mmr"]
-    use_mmr = use_mmr_value if isinstance(use_mmr_value, bool) else str(use_mmr_value).lower() == "true"
+    use_mmr = (
+        use_mmr_value
+        if isinstance(use_mmr_value, bool)
+        else str(use_mmr_value).lower() == "true"
+    )
     mmr_value = row.get("mmr_lambda")
     return TextRankConfig(
         similarity_threshold=float(row["similarity_threshold"]),

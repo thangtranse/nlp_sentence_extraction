@@ -23,6 +23,7 @@ from experiment_utils import (
 )
 from nlp_practice.pagerank import calculate_pagerank, rank_sentences_by_pagerank
 from nlp_practice.preprocessing import read_topic
+from nlp_practice.selection import select_sentences
 from nlp_practice.similarity import build_similarity_matrix
 from nlp_practice.tfidf import build_tfidf_vectors
 
@@ -41,7 +42,7 @@ THRESHOLDS = [
     0.0275,
     0.03,
 ]
-SELECTED_THRESHOLD = 0.0125
+SELECTED_THRESHOLD = 0.0275
 TOP_K = 15
 
 OUTPUT_DIR = ROOT / "data" / "output" / "fine-threshold-sweep"
@@ -129,6 +130,74 @@ def run_top_k_sweep() -> list[dict]:
     return summaries
 
 
+def run_package_mmr_sweep(split: str) -> list[dict]:
+    input_dir = ROOT / "data" / "DUC_TEXT" / split
+    reference_dir = ROOT / "data" / "DUC_SUM"
+    topics = []
+    for topic_path in sorted(input_dir.iterdir()):
+        reference_path = reference_dir / topic_path.name
+        if not topic_path.is_file() or not reference_path.is_file():
+            continue
+        references = read_sentences(reference_path)
+        if not references:
+            continue
+        sentences = read_topic(topic_path)
+        vectors = build_tfidf_vectors(sentences)
+        similarities = build_similarity_matrix(vectors, threshold=0.0)
+        topics.append((sentences, similarities, references))
+
+    summaries = []
+    for threshold in THRESHOLDS:
+        metrics = []
+        graph_metrics = []
+        word_counts = []
+        for sentences, similarities, references in topics:
+            graph = graph_from_matrix(similarities, threshold)
+            scores, _ = calculate_pagerank(
+                graph, damping=0.85, tolerance=1e-8, max_iterations=300
+            )
+            selected = select_sentences(
+                sentences=sentences,
+                pagerank_scores=scores,
+                similarities=similarities,
+                max_summary_words=100,
+                use_mmr=True,
+                mmr_lambda=0.70,
+            )
+            predictions = {
+                " ".join(sentence["content"].split()).casefold()
+                for sentence in selected
+            }
+            metrics.append(calculate_metrics(predictions, references))
+            graph_metrics.append(calculate_graph_metrics(graph))
+            word_counts.append(
+                sum(len(sentence["content"].split()) for sentence in selected)
+            )
+
+        summaries.append(
+            {
+                "threshold": threshold,
+                "eligible_topics": len(metrics),
+                "macro_precision": mean(row["precision"] for row in metrics),
+                "macro_recall": mean(row["recall"] for row in metrics),
+                "macro_f1": mean(row["f1"] for row in metrics),
+                "zero_f1_topics": sum(row["f1"] == 0.0 for row in metrics),
+                "mean_word_count": mean(word_counts),
+                "mean_density": mean(row.density for row in graph_metrics),
+                "mean_isolated_ratio": mean(
+                    row.isolated_ratio for row in graph_metrics
+                ),
+                "mean_average_degree": mean(
+                    row.average_degree for row in graph_metrics
+                ),
+                "mean_connected_components": mean(
+                    row.connected_components for row in graph_metrics
+                ),
+            }
+        )
+    return summaries
+
+
 def run_mmr_sweep() -> tuple[list[dict], list[dict]]:
     reference_dir = ROOT / "data" / "DUC_SUM"
     train_dir = ROOT / "data" / "DUC_TEXT" / "train"
@@ -200,7 +269,7 @@ def make_quality_chart(top_k_rows: list[dict], mmr_rows: list[dict]) -> None:
             color="#C00000",
             linestyle="--",
             linewidth=1.2,
-            label="Selected 0.0125",
+            label="Selected 0.0275",
         )
         axis.set_title(title)
         axis.set_xlabel("Similarity threshold")
@@ -252,6 +321,8 @@ def make_quality_chart(top_k_rows: list[dict], mmr_rows: list[dict]) -> None:
 
 def main() -> None:
     top_k_rows = run_top_k_sweep()
+    package_mmr_train_rows = run_package_mmr_sweep("train")
+    package_mmr_test_rows = run_package_mmr_sweep("test")
     mmr_rows, selected_test_rows = run_mmr_sweep()
     selected_test_summary = aggregate_rows(selected_test_rows)
     test_summary_rows = [
@@ -275,6 +346,14 @@ def main() -> None:
     ]
 
     write_csv(CSV_DIR / "top-k-15-train-summary.csv", top_k_rows)
+    write_csv(
+        CSV_DIR / "package-mmr-100-words-train-summary.csv",
+        package_mmr_train_rows,
+    )
+    write_csv(
+        CSV_DIR / "package-mmr-100-words-test-summary.csv",
+        package_mmr_test_rows,
+    )
     write_csv(CSV_DIR / "mmr-100-words-train-summary.csv", mmr_rows)
     write_csv(CSV_DIR / "mmr-100-words-test-summary.csv", test_summary_rows)
     write_csv(CSV_DIR / "mmr-100-words-test-topic-metrics.csv", selected_test_rows)
@@ -283,6 +362,16 @@ def main() -> None:
     print(
         "Top-K selected:",
         next(row for row in top_k_rows if row["threshold"] == SELECTED_THRESHOLD),
+    )
+    best_package_mmr = max(package_mmr_train_rows, key=lambda row: row["macro_f1"])
+    print("Package MMR best train:", best_package_mmr)
+    print(
+        "Package MMR test at best train threshold:",
+        next(
+            row
+            for row in package_mmr_test_rows
+            if row["threshold"] == best_package_mmr["threshold"]
+        ),
     )
     print(
         "MMR train selected:",
